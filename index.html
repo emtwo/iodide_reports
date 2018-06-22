@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>untitled - iodide</title>
+<title>Activity Stream 56 Beta Eu Enabled Experiment</title>
 <link rel="stylesheet" type="text/css" href="https://iodide.io/master/iodide.master.css">
 </head>
 <body>
@@ -10,8 +10,17 @@
 %% meta
 {
   "lastSaved": "2018-06-20T18:43:36.236Z",
-  "lastExport": "2018-06-20T18:43:57.752Z"
+  "lastExport": "2018-06-20T18:43:57.752Z",
+  "viewMode": "presentation"
 }
+
+%% md
+<h1>Activity Stream 56 Beta Eu Enabled Experiment</h1>
+<div id='graphs' style='max-width: 1400px'>
+(Loading...)
+  </br></br>
+  <img src="https://cdnjs.cloudflare.com/ajax/libs/galleriffic/2.0.1/css/loader.gif"></img>
+</div>
 
 %% resource
 https://d3js.org/d3-dsv.v1.min.js
@@ -19,26 +28,21 @@ https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js
 https://cdnjs.cloudflare.com/ajax/libs/plotly.js/1.36.1/plotly.min.js
 
 %% js
-// External Variables
-API_KEY = "TCESKtblLVKKlbJVXKjvwlYwGOqZrgmeu1YYFuri"
-SQL_QUERY = "SELECT * FROM experiments LIMIT 5"
-
-%% js
 var files = {
   'graphs/population_size.csv': {
-    x: 'submission_date', group: 'type', y: 'count', id: '0', 'ylabel': 'User Count', width: 1600
+    x: 'submission_date', group: 'type', y: 'count', id: '0', 'ylabel': 'User Count', width: 1400
   },
   'graphs/[Existing_Users]_Average_navigation_about_newtab_Per_Active_Hour_Per_User.csv': {
-    x: 'date', group: 'type', y: '_col2', err: 'err', id: '1', 'ylabel': 'Events Per Active Hour', width: 800
+    x: 'date', group: 'type', y: '_col2', err: 'err', id: '1', 'ylabel': 'Events Per Active Hour', width: 700
   },
   'graphs/[New_Users]_Average_unfiltered_uri_count_Per_Active_Hour_Per_User.csv': {
-    x: 'date', group: 'type', y: 'avg', err: '_col3', 'id': '2', 'ylabel': 'Events Per Active Hour', width: 800
+    x: 'date', group: 'type', y: 'avg', err: '_col3', 'id': '2', 'ylabel': 'Events Per Active Hour', width: 700
   },
   'graphs/[Existing_Users]_Average_navigation_searchbar_per_active_hour_per_user.csv': {
-    x: 'date', group: 'type', y: '_col2', err: 'err', 'id': '3', 'ylabel': 'Events Per Active Hour', width: 800
+    x: 'date', group: 'type', y: '_col2', err: 'err', 'id': '3', 'ylabel': 'Events Per Active Hour', width: 700
   },
   'graphs/[New_Users]_Average_unique_domains_count_per_active_hour_per_user.csv': {
-    x: 'date', group: 'type', y: 'avg', err: '_col3', 'id': '4', 'ylabel': 'Events Per Active Hour', width: 800
+    x: 'date', group: 'type', y: 'avg', err: '_col3', 'id': '4', 'ylabel': 'Events Per Active Hour', width: 700
   },
 };
 
@@ -106,11 +110,11 @@ function createTraces(csvFile, fileInfo) {
   var traces = [];
   for (var groupName in xVals) {
     var trace = {
-    	x: xVals[groupName],
-      	y: yVals[groupName],
-      	xaxis: 'x' + fileInfo.id,
-      	yaxis: 'y' + fileInfo.id,
-      	name: groupName,
+      x: xVals[groupName],
+      y: yVals[groupName],
+      xaxis: 'x' + fileInfo.id,
+      yaxis: 'y' + fileInfo.id,
+      name: groupName,
     };
     if (Object.keys(err).length > 0) {
       trace["error_y"] = {
@@ -135,43 +139,68 @@ function createLayouts(graphInfo) {
 }
 
 %% js
+var fetchCalls = [];
+for (var fileName in files) {
+  fetchCalls.push(fetch(fileName));
+}
+iodide.evalQueue.await(fetchCalls);
+
+%% js
+var fileInfoPromises = [];
+for (var fetchResult of fetchCalls) {
+  fetchResult.then(d => {
+    var urlStart = d.url.indexOf('graphs');
+    var filename = d.url.substring(urlStart);
+    var title = getTitleFromFilename(filename);
+    fileInfoPromises.push(Promise.all([d.text(), filename, title]));
+  });
+}
+iodide.evalQueue.await(fileInfoPromises);
+
+%% js
 var csvFiles = [];
-for (var fileName in files) {  
-  fetch(fileName)
-    .then(d => {
-    	var urlStart = d.url.indexOf('graphs');
-    	var filename = d.url.substring(urlStart);
-    	var title = getTitleFromFilename(filename);
-    	return Promise.all([d.text(), filename, title]);
-  	})
-    .then(d => {
-		var fileInfo = files[d[1]];
-    	fileInfo["title"] = d[2];
-    	csvFiles.push({file: d[0], fileInfo: fileInfo});
-  	})
+for (var fileInfoPromise of fileInfoPromises) {
+  fileInfoPromise.then(d => {
+      var fileInfo = files[d[1]];
+      fileInfo["title"] = d[2];
+      csvFiles.push({file: d[0], fileInfo: fileInfo});
+  });
 }
-
-%% md
-<div id='graphs' style='max-width: 1600px'></div>
 
 %% js
-var domGraphs = "";
-var filenames = Object.keys(files);
-for (var keyIndex in filenames) {
-  var filename = filenames[keyIndex];
-  var graphWidth = files[filename].width;
-  var div = "<div id='graph" + String(keyIndex) + "' style='max-width: 1600px; float: left; width: " + String(graphWidth) + "px;'></div>";
-  domGraphs += div;
+function createDomElements() {
+  $("#graphs").empty();
+  var domGraphs = "";
+  var filenames = Object.keys(files);
+  for (var keyIndex in filenames) {
+    var filename = filenames[keyIndex];
+    var graphWidth = files[filename].width;
+    var div = "<div id='graph" + String(keyIndex) + "' style='max-width: 1600px; float: left; width: " + String(graphWidth) + "px;'></div>";
+    domGraphs += div;
+  }
+  $("#graphs").append(domGraphs);
 }
-$( "#graphs" ).append(domGraphs);
 
 %% js
-for (var i in csvFiles) {
-  var csvFile = csvFiles[i];
-  var traces = createTraces(d3.csvParse(csvFile.file), csvFile.fileInfo);
-  var layouts = createLayouts(csvFile.fileInfo);
-  Plotly.newPlot('graph' + csvFile.fileInfo.id, traces, layouts);
+function createPlots() {
+  for (var i in csvFiles) {
+    var csvFile = csvFiles[i];
+    var traces = createTraces(d3.csvParse(csvFile.file), csvFile.fileInfo);
+    var layouts = createLayouts(csvFile.fileInfo);
+    Plotly.newPlot('graph' + csvFile.fileInfo.id, traces, layouts);
+  }
 }
+
+%% js
+createDomElements()
+createPlots()
+
+%% css
+#graphs {
+  text-align: center;
+  font-style: italic;
+}
+
 </script>
 <div id='page'></div>
 <script src='https://iodide.io/master/iodide.master.js'></script>
